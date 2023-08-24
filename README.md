@@ -1,5 +1,5 @@
 # blockchainvoting
-INSTALLATION 
+# INSTALLATION 
 Install the C++ compiler. On Linux, you can do this by typing the following command in the terminal:
 sudo apt install g++
 Clone the repository containing the program code. You can do this by typing the following command in the terminal:
