@@ -3,8 +3,11 @@
 #include <string>
 #include <fstream>
 #include <algorithm>
+#include <exception>
+#include <opencv2/opencv.hpp>
 
 using namespace std;
+using namespace cv;
 
 struct Voter {
   string id;
@@ -22,16 +25,14 @@ vector<Candidate> candidates;
 void readVotersFromFile(const string& filename) {
   ifstream file(filename);
   if (!file.is_open()) {
-    cerr << "Failed to open file: " << filename << endl;
-    exit(1);
+    throw std::runtime_error("Failed to open file: " + filename);
   }
 
   string line;
   while (getline(file, line)) {
     vector<string> tokens = split(line, ",");
     if (tokens.size() != 2) {
-      cerr << "Invalid voter record: " << line << endl;
-      exit(1);
+      throw std::runtime_error("Invalid voter record: " + line);
     }
 
     Voter voter;
@@ -44,16 +45,14 @@ void readVotersFromFile(const string& filename) {
 void readCandidatesFromFile(const string& filename) {
   ifstream file(filename);
   if (!file.is_open()) {
-    cerr << "Failed to open file: " << filename << endl;
-    exit(1);
+    throw std::runtime_error("Failed to open file: " + filename);
   }
 
   string line;
   while (getline(file, line)) {
     vector<string> tokens = split(line, ",");
     if (tokens.size() != 2) {
-      cerr << "Invalid candidate record: " << line << endl;
-      exit(1);
+      throw std::runtime_error("Invalid candidate record: " + line);
     }
 
     Candidate candidate;
@@ -73,7 +72,33 @@ bool isCandidateValid(const Candidate& candidate) {
 
 void scanVoterId() {
   // This function uses the camera of the device to scan the voter ID.
-  // The scanned ID is then stored in a CSV file.
+  // The scanned ID is then stored in a temporary variable.
+  Mat image;
+  VideoCapture cap(0);
+  if (!cap.isOpened()) {
+    throw std::runtime_error("Failed to open camera");
+  }
+
+  while (true) {
+    cap >> image;
+
+    // Display the image on the screen.
+    imshow("Scan Voter ID", image);
+
+    // Wait for a key press.
+    int key = waitKey(1);
+
+    // If the 'q' key is pressed, break out of the loop.
+    if (key == 'q') {
+      break;
+    }
+  }
+
+  // Close the camera.
+  cap.release();
+
+  // Get the scanned ID from the image.
+  string voterId = getVoterIdFromImage(image);
 }
 
 bool compareVoterId(const string& voterId, const vector<Voter>& voters) {
@@ -93,7 +118,6 @@ void showCandidates() {
     cout << candidate.name << endl;
   }
 }
-
 void vote(const int& candidateNumber) {
   // This function lets the voter vote for a candidate by entering their number.
   // The vote is then recorded in a blockchain.
@@ -103,43 +127,22 @@ void vote(const int& candidateNumber) {
   }
 
   // Record the vote in the blockchain.
+  // Get the voter's ID.
+  string voterId = scanVoterId();
+
+  // Get the candidate's name.
+  string candidateName = candidates[candidateNumber - 1].name;
+
+  // Record the vote in the blockchain.
+  // Create a new transaction.
+  Transaction transaction;
+  transaction.set_voter_id(voterId);
+  transaction.set_candidate_name(candidateName);
+
+  // Sign the transaction.
+  transaction.sign();
+
+  // Broadcast the transaction to the network.
+  blockchain.broadcast_transaction(transaction);
 }
 
-int main() {
-  readVotersFromFile("voters.csv");
-  readCandidatesFromFile("candidates.csv");
-
-  // Scan the voter ID.
-  scanVoterId();
-
-  // Compare the voter ID with the IDs in the CSV file.
-  if (!compareVoterId(voterId, voters)) {
-    cerr << "Invalid voter ID." << endl;
-    return 1;
-  }
-
-  // Show the candidates.
-  showCandidates();
-
-  // Let the voter vote for a candidate.
-  vote(candidateNumber);
-
-  return 0;
-}
-
-vector<string> split(const string& str, const char& delimiter) {
-  vector<string> tokens;
-  string::size_type start = 0;
-  string::size_type end = str.find(delimiter);
-  while (end != string::npos) {
-    tokens.push_back(str.substr(start, end - start));
-    start = end + 1;
-    end = str.find(delimiter, start);
-  }
-
-  if (start != str.length()) {
-    tokens.push_back(str.substr(start));
-  }
-
-  return tokens;
-}
