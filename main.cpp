@@ -145,4 +145,21 @@ void vote(const int& candidateNumber) {
   // Broadcast the transaction to the network.
   blockchain.broadcast_transaction(transaction);
 }
+int main() {
+  // Read the voters and candidates from the CSV files.
+  readVotersFromFile("voters.csv");
+  readCandidatesFromFile("candidates.csv");
+
+  // Show the names of the candidates to the voter.
+  showCandidates();
+
+  // Let the voter vote for a candidate.
+  int candidateNumber;
+  cout << "Enter the number of the candidate you want to vote for: ";
+  cin >> candidateNumber;
+  vote(candidateNumber);
+
+  // Exit the program.
+  return 0;
+}
 
